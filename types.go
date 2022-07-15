@@ -3,6 +3,7 @@ package traefikgeoip2
 import (
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/IncSW/geoip2"
 )
@@ -14,6 +15,9 @@ const (
 	// RealIPHeader real ip header.
 	RealIPHeader = "X-Real-IP"
 )
+
+const DefaultCacheExpire = 30 * time.Minute
+const DefaultCachePurge = 2 * time.Hour
 
 // GeoIPResult GeoIPResult.
 type GeoIPResult struct {

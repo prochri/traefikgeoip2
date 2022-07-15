@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	mw "github.com/GiGInnovationLabs/traefikgeoip2"
+	mw "github.com/jeessy2/traefikgeoip2"
 )
 
 const (

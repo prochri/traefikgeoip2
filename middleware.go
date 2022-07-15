@@ -3,6 +3,7 @@ package traefikgeoip2
 
 import (
 	"context"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -10,6 +11,13 @@ import (
 	"strings"
 
 	"github.com/IncSW/geoip2"
+	cache "github.com/patrickmn/go-cache"
+)
+
+var (
+	logInfo = log.New(ioutil.Discard, "geoip2-", log.Ldate|log.Ltime|log.Lshortfile)
+	logWarn = log.New(ioutil.Discard, "geoip2-", log.Ldate|log.Ltime|log.Lshortfile)
+	logErr  = log.New(ioutil.Discard, "geoip2-", log.Ldate|log.Ltime|log.Lshortfile)
 )
 
 // Headers part of the configuration
@@ -30,7 +38,7 @@ type Config struct {
 // CreateConfig creates the default plugin configuration.
 func CreateConfig() *Config {
 	return &Config{
-		DBPath: "GeoLite2-Country.mmdb",
+		DBPath:  "GeoLite2-Country.mmdb",
 		Headers: &Headers{},
 	}
 }
@@ -41,16 +49,18 @@ type TraefikGeoIP2 struct {
 	lookup  LookupGeoIP2
 	name    string
 	headers *Headers
+	cache   *cache.Cache
 }
 
 // New created a new TraefikGeoIP2 plugin.
 func New(ctx context.Context, next http.Handler, cfg *Config, name string) (http.Handler, error) {
 	if _, err := os.Stat(cfg.DBPath); err != nil {
-		log.Printf("[geoip2] DB `%s' not found: %v", cfg.DBPath, err)
+		logErr.Printf("[geoip2] DB `%s' not found: %v", cfg.DBPath, err)
 		return &TraefikGeoIP2{
 			lookup: nil,
 			next:   next,
 			name:   name,
+			cache:  nil,
 		}, nil
 	}
 
@@ -58,7 +68,7 @@ func New(ctx context.Context, next http.Handler, cfg *Config, name string) (http
 	if strings.Contains(cfg.DBPath, "City") {
 		rdr, err := geoip2.NewCityReaderFromFile(cfg.DBPath)
 		if err != nil {
-			log.Printf("[geoip2] DB `%s' not initialized: %v", cfg.DBPath, err)
+			logErr.Printf("[geoip2] DB `%s' not initialized: %v", cfg.DBPath, err)
 		} else {
 			lookup = CreateCityDBLookup(rdr)
 		}
@@ -67,7 +77,7 @@ func New(ctx context.Context, next http.Handler, cfg *Config, name string) (http
 	if strings.Contains(cfg.DBPath, "Country") {
 		rdr, err := geoip2.NewCountryReaderFromFile(cfg.DBPath)
 		if err != nil {
-			log.Printf("[geoip2] DB `%s' not initialized: %v", cfg.DBPath, err)
+			logErr.Printf("[geoip2] DB `%s' not initialized: %v", cfg.DBPath, err)
 		} else {
 			lookup = CreateCountryDBLookup(rdr)
 		}
@@ -78,12 +88,14 @@ func New(ctx context.Context, next http.Handler, cfg *Config, name string) (http
 		next:    next,
 		name:    name,
 		headers: cfg.Headers,
+		cache:   cache.New(DefaultCacheExpire, DefaultCachePurge),
 	}, nil
 }
 
 func (mw *TraefikGeoIP2) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	if mw.lookup == nil {
+		logErr.Println("The db path must contains City/Country")
 		mw.next.ServeHTTP(rw, req)
 		return
 	}
@@ -97,17 +109,29 @@ func (mw *TraefikGeoIP2) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	res, err := mw.lookup(net.ParseIP(ipStr))
-	if err != nil {
-		log.Printf("[geoip2] Unable to find for `%s', %v", ipStr, err)
-		res = &GeoIPResult{
-			country: Unknown,
-			region:  Unknown,
-			city:    Unknown,
+	var (
+		record *GeoIPResult
+		err    error
+	)
+
+	if c, found := mw.cache.Get(ipStr); found {
+		record = c.(*GeoIPResult)
+	} else {
+		record, err = mw.lookup(net.ParseIP(ipStr))
+		if err != nil {
+			logWarn.Printf("Unable to find GeoIP data for `%s', %v", ipStr, err)
+			record = &GeoIPResult{
+				country:   Unknown,
+				region:    Unknown,
+				city:      Unknown,
+				latitude:  Unknown,
+				longitude: Unknown,
+			}
 		}
+		mw.cache.Set(ipStr, record, cache.DefaultExpiration)
 	}
 
-	mw.addHeaders(req, res)
+	mw.addHeaders(req, record)
 
 	mw.next.ServeHTTP(rw, req)
 }
