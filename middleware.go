@@ -52,6 +52,9 @@ type TraefikGeoIP2 struct {
 	cache   *cache.Cache
 }
 
+var CityReader *geoip2.CityReader
+var CountryReader *geoip2.CountryReader
+
 // New created a new TraefikGeoIP2 plugin.
 func New(ctx context.Context, next http.Handler, cfg *Config, name string) (http.Handler, error) {
 	if _, err := os.Stat(cfg.DBPath); err != nil {
@@ -66,20 +69,26 @@ func New(ctx context.Context, next http.Handler, cfg *Config, name string) (http
 
 	var lookup LookupGeoIP2
 	if strings.Contains(cfg.DBPath, "City") {
-		rdr, err := geoip2.NewCityReaderFromFile(cfg.DBPath)
+		var err error = nil
+		if CityReader == nil {
+			CityReader, err = geoip2.NewCityReaderFromFile(cfg.DBPath)
+		}
 		if err != nil {
 			logErr.Printf("[geoip2] DB `%s' not initialized: %v", cfg.DBPath, err)
 		} else {
-			lookup = CreateCityDBLookup(rdr)
+			lookup = CreateCityDBLookup(CityReader)
 		}
 	}
 
 	if strings.Contains(cfg.DBPath, "Country") {
-		rdr, err := geoip2.NewCountryReaderFromFile(cfg.DBPath)
+		var err error = nil
+		if CountryReader == nil {
+			CountryReader, err = geoip2.NewCountryReaderFromFile(cfg.DBPath)
+		}
 		if err != nil {
 			logErr.Printf("[geoip2] DB `%s' not initialized: %v", cfg.DBPath, err)
 		} else {
-			lookup = CreateCountryDBLookup(rdr)
+			lookup = CreateCountryDBLookup(CountryReader)
 		}
 	}
 
