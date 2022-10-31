@@ -7,12 +7,13 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	mw "github.com/GiGInnovationLabs/traefikgeoip2"
+	mw "github.com/prochri/traefikgeoip2"
 )
 
 const (
 	ValidIP       = "188.193.88.199"
 	ValidIPNoCity = "20.1.184.61"
+	LocalIP       = "10.0.0.42"
 )
 
 func TestGeoIPConfig(t *testing.T) {
