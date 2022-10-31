@@ -131,6 +131,28 @@ func TestGeoIPCountryDBFromRemoteAddr(t *testing.T) {
 	assertHeader(t, req, mw.CityHeader, mw.Unknown)
 }
 
+func TestLocalAddress(t *testing.T) {
+	mwCfg := mw.CreateConfig()
+	mwCfg.DBPath = "./GeoLite2-Country.mmdb"
+	mwCfg.LocationRewrites = append(mwCfg.LocationRewrites, mw.LocationRewrite{
+		IpRange: "10.0.0.0/8",
+		Country: "DE",
+		Region:  "BA",
+		City:    "Munich",
+	})
+
+	next := http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {})
+	instance, _ := mw.New(context.TODO(), next, mwCfg, "traefik-geoip2")
+
+	req := httptest.NewRequest(http.MethodGet, "http://localhost", nil)
+	req.RemoteAddr = fmt.Sprintf("%s:9999", LocalIP)
+	instance.ServeHTTP(httptest.NewRecorder(), req)
+
+	assertHeader(t, req, mw.CountryHeader, "DE")
+	assertHeader(t, req, mw.RegionHeader, "BA")
+	assertHeader(t, req, mw.CityHeader, "Munich")
+}
+
 func assertHeader(t *testing.T, req *http.Request, key, expected string) {
 	t.Helper()
 	if req.Header.Get(key) != expected {
