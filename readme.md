@@ -90,6 +90,13 @@ to install the plugin.
       plugin:
         geoip:
           dbPath: "/var/lib/geoip2/GeoLite2-City.mmdb"
+          hearders:
+            # remove any if you want
+            Country: X-Geoip2-Country
+            Region: X-Geoip2-Region
+            City: X-Geoip2-City
+            Latitude: X-Geoip2-Latitude
+            Longitude: X-Geoip2-Longitude
     ```
 
 2. Apply
