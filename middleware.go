@@ -15,11 +15,13 @@ import (
 )
 
 type LocationRewrite struct {
-	IpRange string `json:"ipRange"`
-	Country string `json:"country,omitempty"`
-	Region  string `json:"region,omitempty"`
-	City    string `json:"city,omitempty"`
-	IPnet   *net.IPNet
+	IpRange   string `json:"ipRange"`
+	Country   string `json:"country,omitempty"`
+	Region    string `json:"region,omitempty"`
+	City      string `json:"city,omitempty"`
+	Latitude  string `json:"latitude,omitempty"`
+	Longitude string `json:"longitude,omitempty"`
+	IPnet     *net.IPNet
 }
 
 var (
@@ -187,9 +189,11 @@ func (mw *TraefikGeoIP2) findLocalRewrite(ip net.IP) (*GeoIPResult, error) {
 	for _, lr := range mw.locationRewrites {
 		if lr.IPnet.Contains(ip) {
 			return &GeoIPResult{
-				country: lr.Country,
-				region:  lr.Region,
-				city:    lr.City,
+				country:   lr.Country,
+				region:    lr.Region,
+				city:      lr.City,
+				longitude: lr.Longitude,
+				latitude:  lr.Latitude,
 			}, nil
 		}
 	}
