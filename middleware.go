@@ -46,6 +46,8 @@ type Config struct {
 	LocationRewrites []LocationRewrite `json:"locationRewrites,omitempty"`
 }
 
+func ResetLookup() {}
+
 // CreateConfig creates the default plugin configuration.
 func CreateConfig() *Config {
 	return &Config{

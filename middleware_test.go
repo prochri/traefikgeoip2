@@ -23,6 +23,7 @@ func TestGeoIPConfig(t *testing.T) {
 	}
 
 	mwCfg.DBPath = "./non-existing"
+	mw.ResetLookup()
 	_, err := mw.New(context.TODO(), nil, mwCfg, "")
 	if err != nil {
 		t.Fatalf("Must not fail on missing DB")
@@ -42,6 +43,7 @@ func TestGeoIPBasic(t *testing.T) {
 	called := false
 	next := http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) { called = true })
 
+	mw.ResetLookup()
 	instance, err := mw.New(context.TODO(), next, mwCfg, "traefik-geoip2")
 	if err != nil {
 		t.Fatalf("Error creating %v", err)
@@ -66,6 +68,7 @@ func TestMissingGeoIPDB(t *testing.T) {
 	called := false
 	next := http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) { called = true })
 
+	mw.ResetLookup()
 	instance, err := mw.New(context.TODO(), next, mwCfg, "traefik-geoip2")
 	if err != nil {
 		t.Fatalf("Error creating %v", err)
@@ -93,6 +96,7 @@ func TestGeoIPFromRemoteAddr(t *testing.T) {
 	mwCfg.DBPath = "./GeoLite2-City.mmdb"
 
 	next := http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {})
+	mw.ResetLookup()
 	instance, _ := mw.New(context.TODO(), next, mwCfg, "traefik-geoip2")
 
 	req := httptest.NewRequest(http.MethodGet, "http://localhost", nil)
@@ -116,6 +120,7 @@ func TestGeoIPCountryDBFromRemoteAddr(t *testing.T) {
 	mwCfg.DBPath = "./GeoLite2-Country.mmdb"
 
 	next := http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {})
+	mw.ResetLookup()
 	instance, _ := mw.New(context.TODO(), next, mwCfg, "traefik-geoip2")
 
 	req := httptest.NewRequest(http.MethodGet, "http://localhost", nil)
