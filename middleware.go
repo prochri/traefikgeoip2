@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/IncSW/geoip2"
-	cache "github.com/patrickmn/go-cache"
+	// cache "github.com/patrickmn/go-cache"
 )
 
 type LocationRewrite struct {
@@ -69,7 +69,7 @@ type TraefikGeoIP2 struct {
 	name             string
 	locationRewrites []LocationRewrite
 	headers          *Headers
-	cache            *cache.Cache
+	// cache            *cache.Cache
 }
 
 var CityReader *geoip2.CityReader
@@ -100,7 +100,7 @@ func New(ctx context.Context, next http.Handler, cfg *Config, name string) (http
 			next:             next,
 			name:             name,
 			locationRewrites: cfg.LocationRewrites,
-			cache:            nil,
+			// cache:            nil,
 		}, nil
 	}
 
@@ -135,7 +135,7 @@ func New(ctx context.Context, next http.Handler, cfg *Config, name string) (http
 		name:             name,
 		locationRewrites: cfg.LocationRewrites,
 		headers:          cfg.Headers,
-		cache:            cache.New(DefaultCacheExpire, DefaultCachePurge),
+		// cache:            cache.New(DefaultCacheExpire, DefaultCachePurge),
 	}, nil
 }
 
@@ -162,25 +162,25 @@ func (mw *TraefikGeoIP2) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		err    error
 	)
 
-	if c, found := mw.cache.Get(ipStr); found {
-		record = c.(*GeoIPResult)
-	} else {
-		record, err = mw.lookup(net.ParseIP(ipStr))
-		if err != nil {
-			record, err = mw.findLocalRewrite(ip)
-		}
-		if err != nil {
-			logWarn.Printf("Unable to find GeoIP data for `%s', %v", ipStr, err)
-			record = &GeoIPResult{
-				country:   Unknown,
-				region:    Unknown,
-				city:      Unknown,
-				latitude:  Unknown,
-				longitude: Unknown,
-			}
-		}
-		mw.cache.Set(ipStr, record, cache.DefaultExpiration)
+	// if c, found := mw.cache.Get(ipStr); found {
+	// 	record = c.(*GeoIPResult)
+	// } else {
+	record, err = mw.lookup(net.ParseIP(ipStr))
+	if err != nil {
+		record, err = mw.findLocalRewrite(ip)
 	}
+	if err != nil {
+		logWarn.Printf("Unable to find GeoIP data for `%s', %v", ipStr, err)
+		record = &GeoIPResult{
+			country:   Unknown,
+			region:    Unknown,
+			city:      Unknown,
+			latitude:  Unknown,
+			longitude: Unknown,
+		}
+	}
+	// 	mw.cache.Set(ipStr, record, cache.DefaultExpiration)
+	// }
 
 	mw.addHeaders(req, record)
 
